@@ -1,0 +1,73 @@
+{
+  "actorSpecification": 1,
+  "name": "facebook-marketplace-wrapper",
+  "title": "Facebook Marketplace Scraper (Wrapper)",
+  "version": "0.1.1",
+  "description": "Wrapper actor that scrapes Facebook Marketplace search/list pages with Playwright and optional per-item detail fetch. Maintains Apify Proxy options and run-to-run deduping.",
+  "dockerfile": "Dockerfile",
+  "input": {
+    "title": "Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+      "urls": {
+        "title": "Marketplace listings urls",
+        "description": "Publicly reachable Facebook Marketplace search/list URLs (location, category, or search).",
+        "type": "array",
+        "items": { "type": "string", "format": "uri" },
+        "editor": "stringList",
+        "prefill": [
+          "https://www.facebook.com/marketplace/portland/search/?query=Dive%20gear&radius=805&deliveryMethod=all"
+        ]
+      },
+      "fetch_item_details": {
+        "title": "Scrape items details page",
+        "description": "Open each item page to get more data (slower).",
+        "type": "boolean",
+        "default": false,
+        "editor": "checkbox"
+      },
+      "deduplicate_across_runs": {
+        "title": "Deduplicate across runs",
+        "description": "Skip listings already seen in previous runs.",
+        "type": "boolean",
+        "default": true,
+        "editor": "checkbox"
+      },
+      "stop_on_first_page_all_duplicates": {
+        "title": "Stop on First Page All Duplicates",
+        "description": "Stops early when the first page yields only duplicates. Requires deduplication enabled.",
+        "type": "boolean",
+        "default": false,
+        "editor": "checkbox"
+      },
+      "max_items": {
+        "title": "Total scraped items to not exceed",
+        "description": "Leave blank to scrape all available items.",
+        "type": "integer",
+        "default": 100,
+        "minimum": 1,
+        "editor": "number"
+      },
+      "proxy": {
+        "title": "Proxy",
+        "description": "Apify proxy settings or your own proxy URLs.",
+        "type": "object",
+        "editor": "proxy",
+        "properties": {
+          "useApifyProxy": { "type": "boolean", "default": true },
+          "apifyProxyGroups": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "apifyProxyCountry": { "type": "string" },
+          "proxyUrls": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "required": ["urls"]
+  }
+}
