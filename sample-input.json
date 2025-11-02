@@ -1,0 +1,14 @@
+{
+  "urls": [
+    "https://www.facebook.com/marketplace/portland/search/?query=Dive%20gear&radius=805&deliveryMethod=all"
+  ],
+  "fetch_item_details": false,
+  "deduplicate_across_runs": true,
+  "stop_on_first_page_all_duplicates": false,
+  "max_items": 100,
+  "proxy": {
+    "useApifyProxy": true,
+    "apifyProxyGroups": ["RESIDENTIAL"],
+    "apifyProxyCountry": "US"
+  }
+}

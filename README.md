@@ -33,9 +33,9 @@ The steps below demonstrate how to build and run the actor locally using the Api
 
 3. **Run the actor locally:**
    ```bash
-   apify run --input=INPUT_SCHEMA.json
+   apify run --input=sample-input.json
    ```
-   The default `INPUT_SCHEMA.json` includes a sample Marketplace URL. Customize the file or pass a different JSON file to target other searches.
+   Copy the sample payload below into `sample-input.json` (or provide your own file) before running the command.
 
 4. **Deploy to Apify (optional):**
    ```bash
@@ -44,7 +44,7 @@ The steps below demonstrate how to build and run the actor locally using the Api
    This uploads the actor, triggering the same build pipeline on Apify's infrastructure.
 
 ## Sample input
-`INPUT_SCHEMA.json` ships with the following example payload:
+Create `sample-input.json` with the following example payload:
 ```json
 {
   "urls": [
