@@ -10,7 +10,7 @@ This project packages the wrapper actor so it can be built and executed on Apify
 
 ## Project layout
 - `.actor/actor.json` – Actor manifest with the exact input schema used on Apify.
-- `.actor/INPUT_SCHEMA.json` – Standalone schema file validated with Apify tooling.
+- `INPUT_SCHEMA.json` – Standalone schema file validated with Apify tooling.
 - `Dockerfile` – Finalized image definition based on `apify/actor-python-playwright` with the upstream scraper vendored during build.
 - `requirements.txt` – Python dependencies pinned for reproducible builds (including `apify==3.0.3`).
 - `src/__main__.py` – Async wrapper entrypoint executed by Apify.
