@@ -5,5 +5,5 @@
   "version": "0.1",
   "description": "Wrapper actor that scrapes Facebook Marketplace search/list pages with Playwright and optional per-item detail fetch. Maintains Apify Proxy options and run-to-run deduping.",
   "dockerfile": "Dockerfile",
-  "input": "INPUT_SCHEMA.json"
+  "input": "./INPUT_SCHEMA.json"
 }
