@@ -1,6 +1,6 @@
 import asyncio
 import re
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from apify import Actor
 from bs4 import BeautifulSoup
@@ -8,6 +8,25 @@ from playwright.async_api import Page, async_playwright
 from playwright_stealth import stealth_async
 
 LISTING_SEL = 'a[href*="/marketplace/item/"]'
+
+
+def normalize_urls(raw: Union[str, List[Any], Tuple[Any, ...], None]) -> List[str]:
+    """Accepts textarea string (one URL per line) or list; returns ordered, deduped list of URLs."""
+    if not raw:
+        return []
+    if isinstance(raw, str):
+        urls = [u.strip() for u in raw.splitlines() if u.strip()]
+    elif isinstance(raw, (list, tuple)):
+        urls = [str(u).strip() for u in raw if str(u).strip()]
+    else:
+        urls = []
+    seen: Set[str] = set()
+    out: List[str] = []
+    for u in urls:
+        if u not in seen:
+            out.append(u)
+            seen.add(u)
+    return out
 
 
 def extract_listing_id(url: Optional[str]) -> Optional[str]:
@@ -31,12 +50,9 @@ async def snapshot_cards(page: Page) -> List[Dict[str, Any]]:
     for index in range(count):
         anchor = anchors.nth(index)
         href = await anchor.get_attribute("href")
-        url = (
-            href
-            if href and href.startswith("http")
-            else f"https://www.facebook.com{href}" if href else None
-        )
+        url = href if (href and href.startswith("http")) else (f"https://www.facebook.com{href}" if href else None)
         listing_id = extract_listing_id(url)
+
         card = anchor.locator("xpath=ancestor::div[1]")
 
         price_text = None
@@ -63,6 +79,7 @@ async def snapshot_cards(page: Page) -> List[Dict[str, Any]]:
             }
         )
 
+    # Order-preserving dedupe by listing_id
     unique_records: Dict[str, Dict[str, Any]] = {}
     for record in records:
         lid = record.get("listing_id")
@@ -91,6 +108,7 @@ async def fetch_details(context, item_url: str) -> Dict[str, Any]:
         html = await page.content()
         soup = BeautifulSoup(html, "lxml")
         description = None
+        # Heuristic selectors; FB DOM varies
         selectors = [
             "div[role=main]",
             "div.x1ja2u2z",
@@ -110,7 +128,8 @@ async def run() -> None:
     async with Actor:
         input_data = await Actor.get_input() or {}
 
-        urls: List[str] = input_data.get("urls", [])
+        # Accept textarea string or array for 'urls'
+        urls = normalize_urls(input_data.get("urls"))
         fetch_item_details: bool = bool(input_data.get("fetch_item_details", False))
         dedupe_across_runs: bool = bool(input_data.get("deduplicate_across_runs", True))
         stop_on_all_dupes: bool = bool(input_data.get("stop_on_first_page_all_duplicates", False))
@@ -128,13 +147,9 @@ async def run() -> None:
                 }
             )
         elif proxy_input.get("proxyUrls"):
-            proxy_configuration = await Actor.create_proxy_configuration(
-                {"proxyUrls": proxy_input["proxyUrls"]}
-            )
+            proxy_configuration = await Actor.create_proxy_configuration({"proxyUrls": proxy_input["proxyUrls"]})
 
-        proxy_url = (
-            await proxy_configuration.new_url() if proxy_configuration else None
-        )
+        proxy_url = await proxy_configuration.new_url() if proxy_configuration else None
 
         async with async_playwright() as playwright:
             launch_kwargs: Dict[str, Any] = {}
@@ -142,13 +157,11 @@ async def run() -> None:
                 launch_kwargs["proxy"] = {"server": proxy_url}
 
             browser = await playwright.chromium.launch(headless=True, **launch_kwargs)
-            context = await browser.new_context(
-                locale="en-US",
-                timezone_id="America/New_York",
-            )
+            context = await browser.new_context(locale="en-US", timezone_id="America/New_York")
             page = await context.new_page()
             await stealth_async(page)
 
+            # Cross-run dedupe store
             seen_store = await Actor.open_key_value_store("facebook-marketplace-seen")
             seen_ids: Set[str] = set(await seen_store.get_value("ids") or [])
 
@@ -161,14 +174,10 @@ async def run() -> None:
                 first_batch = await snapshot_cards(page)
                 if dedupe_across_runs and stop_on_all_dupes and first_batch:
                     first_dupes_only = all(
-                        item.get("listing_id") in seen_ids
-                        for item in first_batch
-                        if item.get("listing_id")
+                        item.get("listing_id") in seen_ids for item in first_batch if item.get("listing_id")
                     )
                     if first_dupes_only:
-                        await Actor.log.info(
-                            "First page is all duplicates; stopping early for this URL."
-                        )
+                        await Actor.log.info("First page is all duplicates; stopping early for this URL.")
                         continue
 
                 await scroll_results(page, max_scrolls=10, delay_ms=1200)
@@ -186,9 +195,7 @@ async def run() -> None:
                             details = await fetch_details(context, item["url"])
                             item.update(details or {})
                         except Exception as exc:
-                            await Actor.log.warning(
-                                f"Detail fetch failed for {listing_id}: {exc}"
-                            )
+                            await Actor.log.warning(f"Detail fetch failed for {listing_id}: {exc}")
 
                     item["source_url"] = url
                     await Actor.push_data(item)
